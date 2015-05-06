@@ -137,7 +137,13 @@
 }
 - (void)change_isShowbar:(NSString *)newValue
 {
-    NSLog(@"change_isShowbar待实现......");
+    if ([newValue isEqualToString:@"false"]) {
+        self.showsVerticalScrollIndicator = NO;
+    }
+    else
+    {
+        self.showsVerticalScrollIndicator = YES;
+    }
 }
 #pragma mark -
 #pragma mark - 同步异步方法的实现
