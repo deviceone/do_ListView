@@ -14,6 +14,7 @@
 #import "doIPage.h"
 #import "doISourceFS.h"
 #import "doUIContainer.h"
+#import "doJsonHelper.h"
 
 @implementation do_ListView_UIView
 {
@@ -35,7 +36,7 @@
     _cellTemplatesArray = [[NSMutableArray alloc]init];
     self.delegate = self;
     self.dataSource = self;
-
+    
 }
 //销毁所有的全局对象
 - (void) OnDispose
@@ -137,13 +138,7 @@
 }
 - (void)change_isShowbar:(NSString *)newValue
 {
-    if ([newValue isEqualToString:@"false"]) {
-        self.showsVerticalScrollIndicator = NO;
-    }
-    else
-    {
-        self.showsVerticalScrollIndicator = YES;
-    }
+    NSLog(@"change_isShowbar待实现......");
 }
 #pragma mark -
 #pragma mark - 同步异步方法的实现
@@ -157,9 +152,9 @@
 
 - (void) bindItems: (NSArray*) parms
 {
-    doJsonNode * _dictParas = [parms objectAtIndex:0];
+    NSDictionary * _dictParas = [parms objectAtIndex:0];
     id<doIScriptEngine> _scriptEngine= [parms objectAtIndex:1];
-    NSString* _address = [_dictParas GetOneText:@"data": nil];
+    NSString* _address = [doJsonHelper GetOneText: _dictParas :@"data": nil];
     if (_address == nil || _address.length <= 0) [NSException raise:@"doListView" format:@"未指定相关的listview data参数！",nil];
     id bindingModule = [doScriptEngineHelper ParseMultitonModule: _scriptEngine : _address];
     if (bindingModule == nil) [NSException raise:@"doListView" format:@"data参数无效！",nil];
@@ -177,9 +172,9 @@
 
 - (void)fireEvent:(int)state :(CGFloat)y
 {
-    doJsonNode *node = [[doJsonNode alloc] init];
-    [node SetOneInteger:@"state" :state];
-    [node SetOneText:@"y" :[NSString stringWithFormat:@"%f",y]];
+    NSMutableDictionary *node = [[NSMutableDictionary alloc] init];
+    [node setObject:[NSNumber numberWithInt:state] forKey:@"state"];
+    [node setObject:[NSNumber numberWithFloat:y] forKey:@"y"];
     doInvokeResult* _invokeResult = [[doInvokeResult alloc]init:_model.UniqueKey];
     [_invokeResult SetResultNode:node];
     [_model.EventCenter FireEvent:@"pull":_invokeResult];
@@ -192,9 +187,9 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
-    doJsonNode *dataNode = [jsonValue GetNode];
-    int cellIndex = [dataNode GetOneInteger:@"template" :0];
+    id jsonValue = [_dataArrays GetData:(int)indexPath.row];
+    NSDictionary *dataNode = [doJsonHelper GetNode:jsonValue];
+    int cellIndex = [doJsonHelper GetOneInteger: dataNode :@"template" :0];
     NSString* indentify = _cellTemplatesArray[cellIndex];
     doUIModule *showCellMode;
     
@@ -205,7 +200,7 @@
         cell.selectedBackgroundView.backgroundColor = _selectColor;
         UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(longPress:)];
         [cell addGestureRecognizer:longPress];
-         doSourceFile *source = [[[_model.CurrentPage CurrentApp] SourceFS] GetSourceByFileName:indentify];
+        doSourceFile *source = [[[_model.CurrentPage CurrentApp] SourceFS] GetSourceByFileName:indentify];
         id<doIPage> pageModel = _model.CurrentPage;
         doUIContainer *container = [[doUIContainer alloc] init:pageModel];
         [container LoadFromFile:source:nil:nil];
@@ -236,9 +231,9 @@
 #pragma mark - tableView delegate
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
-    doJsonValue *jsonValue = [_dataArrays GetData:(int)indexPath.row];
-    doJsonNode *dataNode = [jsonValue GetNode];
-    int cellIndex = [dataNode GetOneInteger:@"template" :0];
+    id jsonValue = [_dataArrays GetData:(int)indexPath.row];
+    NSDictionary *dataNode = [doJsonHelper GetNode:jsonValue];
+    int cellIndex = [doJsonHelper GetOneInteger: dataNode :@"template" :0];
     NSString* indentify = _cellTemplatesArray[cellIndex];
     doUIModule*  model = _cellTemplatesDics[indentify];
     [model SetModelData:jsonValue ];
@@ -303,12 +298,12 @@
     //_model的属性进行修改，同时调用self的对应的属性方法，修改视图
     [doUIModuleHelper HandleViewProperChanged: self :_model : _changedValues ];
 }
-- (BOOL) InvokeSyncMethod: (NSString *) _methodName : (doJsonNode *)_dicParas :(id<doIScriptEngine>)_scriptEngine : (doInvokeResult *) _invokeResult
+- (BOOL) InvokeSyncMethod: (NSString *) _methodName : (NSDictionary *)_dicParas :(id<doIScriptEngine>)_scriptEngine : (doInvokeResult *) _invokeResult
 {
     //同步消息
     return [doScriptEngineHelper InvokeSyncSelector:self : _methodName :_dicParas :_scriptEngine :_invokeResult];
 }
-- (BOOL) InvokeAsyncMethod: (NSString *) _methodName : (doJsonNode *) _dicParas :(id<doIScriptEngine>) _scriptEngine : (NSString *) _callbackFuncName
+- (BOOL) InvokeAsyncMethod: (NSString *) _methodName : (NSDictionary *) _dicParas :(id<doIScriptEngine>) _scriptEngine : (NSString *) _callbackFuncName
 {
     //异步消息
     return [doScriptEngineHelper InvokeASyncSelector:self : _methodName :_dicParas :_scriptEngine: _callbackFuncName];
